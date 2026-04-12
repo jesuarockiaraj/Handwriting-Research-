@@ -1,0 +1,9 @@
+Metadata-Version: 2.4
+Name: handwriting-research
+Version: 0.1.0
+Summary: Multi-modal handwriting feature extraction and deep learning toolkit
+Requires-Python: >=3.10
+Requires-Dist: numpy
+Requires-Dist: scipy
+Requires-Dist: scikit-learn
+Requires-Dist: torch

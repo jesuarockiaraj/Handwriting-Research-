@@ -1,0 +1,13 @@
+README.md
+pyproject.toml
+src/handwriting_research/__init__.py
+src/handwriting_research/feature_extraction.py
+src/handwriting_research/interpretation.py
+src/handwriting_research/models.py
+src/handwriting_research/pipeline.py
+src/handwriting_research.egg-info/PKG-INFO
+src/handwriting_research.egg-info/SOURCES.txt
+src/handwriting_research.egg-info/dependency_links.txt
+src/handwriting_research.egg-info/requires.txt
+src/handwriting_research.egg-info/top_level.txt
+tests/test_pipeline.py
