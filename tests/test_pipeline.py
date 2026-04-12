@@ -1,9 +1,11 @@
 import numpy as np
+import pytest
 import torch
 
 from handwriting_research.feature_extraction import DynamicFeatureExtractor, MultimodalFeatureIntegrator, StaticFeatureExtractor
-from handwriting_research.models import AttentionEnhancedEmotionClassifier, PersonalityRegressor, VariationalAutoencoder
+from handwriting_research.models import AttentionEnhancedEmotionClassifier, ConditionalTabularGAN, GANConfig, PersonalityRegressor, VariationalAutoencoder
 from handwriting_research.pipeline import HandwritingSample, MultiModalPipeline
+from handwriting_research.training import emotion_loss, gan_train_step, gaussian_nll_loss, vae_loss
 
 
 def synthetic_image(size=32):
@@ -87,3 +89,50 @@ def test_integrator_handles_missing_values():
     reduced, keys = integrator.fit_transform(rows)
     assert reduced.shape[0] == len(rows)
     assert "a" in keys and "b" in keys and "c" in keys
+
+
+def test_vae_loss_components():
+    vae = VariationalAutoencoder(input_dim=32, latent_dim=8)
+    x = torch.randn(4, 32)
+    recon, mu, logvar = vae(x)
+    total, recon_loss, kl_loss = vae_loss(recon, x, mu, logvar, beta=1.0)
+    assert total.shape == ()
+    assert recon_loss.item() >= 0
+    # KL divergence can be negative per-sample but mean is >= -0.5*latent_dim
+    assert total.item() == pytest.approx(recon_loss.item() + kl_loss.item(), rel=1e-5)
+
+
+def test_gaussian_nll_loss_shape():
+    regressor = PersonalityRegressor(input_dim=32, output_dim=5)
+    x = torch.randn(4, 32)
+    mu, logvar = regressor(x)
+    target = torch.randn(4, 5)
+    loss = gaussian_nll_loss(mu, logvar, target)
+    assert loss.shape == ()
+    assert not torch.isnan(loss)
+
+
+def test_emotion_loss_shape():
+    emotion_model = AttentionEnhancedEmotionClassifier(morph_dim=16, texture_channels=1, dynamic_dim=10, num_classes=3)
+    morph = torch.randn(4, 16)
+    texture = torch.randn(4, 1, 16, 16)
+    dynamic = torch.randn(4, 50, 10)
+    logits = emotion_model(morph, texture, dynamic)
+    labels = torch.randint(0, 3, (4,))
+    loss = emotion_loss(logits, labels)
+    assert loss.shape == ()
+    assert not torch.isnan(loss)
+
+
+def test_gan_train_step_losses():
+    config = GANConfig(feature_dim=16, condition_dim=4, hidden_dim=32)
+    gan = ConditionalTabularGAN(config)
+    opt_g = torch.optim.Adam(gan.generator.parameters(), lr=1e-3)
+    opt_d = torch.optim.Adam(gan.discriminator.parameters(), lr=1e-3)
+    real = torch.randn(8, 16)
+    cond = torch.randn(8, 4)
+    d_loss, g_loss = gan_train_step(gan.generator, gan.discriminator, real, cond, config.hidden_dim, opt_g, opt_d)
+    assert d_loss.shape == ()
+    assert g_loss.shape == ()
+    assert not torch.isnan(d_loss)
+    assert not torch.isnan(g_loss)
