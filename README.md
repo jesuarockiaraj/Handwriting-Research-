@@ -78,6 +78,16 @@ d_loss, g_loss = gan_train_step(
 )
 ```
 
+## Installation
+
+```bash
+# Install the package with all runtime dependencies
+pip install -e .
+
+# Also install test dependencies (adds pytest)
+pip install -e ".[dev]"
+```
+
 ## Run tests
 
 ```bash
