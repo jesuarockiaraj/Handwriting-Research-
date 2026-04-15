@@ -8,17 +8,21 @@ from handwriting_research.pipeline import HandwritingSample, MultiModalPipeline
 from handwriting_research.training import emotion_loss, gan_train_step, gaussian_nll_loss, vae_loss
 
 
-def synthetic_image(size=32):
+def synthetic_image(size=32, seed=0):
+    rng = np.random.default_rng(seed)
     img = np.ones((size, size), dtype=np.float32)
     img[10:22, 8:24] = 0.2
     img[14:16, 8:24] = 0.0
-    return img
+    img += rng.normal(0, 0.08, img.shape).astype(np.float32)
+    return np.clip(img, 0.0, 1.0)
 
 
-def synthetic_trace(n=120):
+def synthetic_trace(n=120, seed=0):
+    rng = np.random.default_rng(seed)
+    amplitude = 1.0 + rng.uniform(-0.4, 0.4)
     t = np.linspace(0, 1.2, n)
-    x = np.sin(2 * np.pi * t) + 0.1 * t
-    y = np.cos(2 * np.pi * t)
+    x = amplitude * np.sin(2 * np.pi * t) + 0.1 * t
+    y = amplitude * np.cos(2 * np.pi * t)
     p = 0.5 + 0.2 * np.sin(4 * np.pi * t)
     return t, x, y, p
 
@@ -27,8 +31,8 @@ def test_static_and_dynamic_extractors_produce_features():
     static = StaticFeatureExtractor()
     dynamic = DynamicFeatureExtractor()
 
-    sf = static.extract(synthetic_image())
-    t, x, y, p = synthetic_trace()
+    sf = static.extract(synthetic_image(seed=0))
+    t, x, y, p = synthetic_trace(seed=0)
     df = dynamic.extract(t, x, y, p)
 
     assert "slant_angle" in sf
@@ -41,11 +45,11 @@ def test_multimodal_pipeline_dimensionality_reduction():
     pipeline = MultiModalPipeline()
     samples = []
     for i in range(8):
-        t, x, y, p = synthetic_trace()
+        t, x, y, p = synthetic_trace(seed=i)
         sample = HandwritingSample(
-            image=synthetic_image() + (i * 0.01),
+            image=synthetic_image(seed=i),
             t=t,
-            x=x + i * 0.01,
+            x=x,
             y=y,
             pressure=p,
         )
